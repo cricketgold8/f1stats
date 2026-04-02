@@ -130,12 +130,20 @@ const css = `
     --font-display: 'Barlow Condensed', sans-serif;
     --font-body: 'Barlow', sans-serif;
     --r: 6px; --r2: 12px;
+    --nav-bg: rgba(10,10,10,0.95);
+  }
+  [data-theme="light"] {
+    --gold: #B8860B;
+    --bg: #f5f5f5; --bg2: #ffffff; --bg3: #ebebeb; --bg4: #e0e0e0;
+    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
+    --text: #111111; --text2: #555555; --text3: #999999;
+    --nav-bg: rgba(245,245,245,0.95);
   }
   body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--bg2); } ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 2px; }
 
   .app { min-height: 100vh; }
-  .nav { position: sticky; top: 0; z-index: 100; background: rgba(10,10,10,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border2); }
+  .nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border2); }
   .nav-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; gap: 0; padding: 0 16px; height: 56px; }
   .logo { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--red); letter-spacing: 1px; margin-right: 32px; cursor: pointer; white-space: nowrap; }
   .logo span { color: var(--text); }
@@ -209,7 +217,7 @@ const css = `
   .track-line { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
   .track-line:last-child { border-bottom: none; }
 
-  .hero-banner { background: linear-gradient(135deg, #0a0a0a 0%, #1a0505 50%, #0a0a0a 100%); border: 1px solid var(--border2); border-radius: var(--r2); padding: 32px; margin-bottom: 24px; position: relative; overflow: hidden; }
+  .hero-banner { background: linear-gradient(135deg, var(--bg) 0%, var(--bg3) 50%, var(--bg) 100%); border: 1px solid var(--border2); border-radius: var(--r2); padding: 32px; margin-bottom: 24px; position: relative; overflow: hidden; }
   .hero-banner::before { content: 'F1'; position: absolute; right: -20px; top: -20px; font-family: var(--font-display); font-size: 180px; font-weight: 800; color: rgba(225,6,0,0.04); line-height: 1; pointer-events: none; }
   .hero-season { font-family: var(--font-display); font-size: 72px; font-weight: 800; color: var(--red); line-height: 1; }
   .hero-subtitle { font-family: var(--font-display); font-size: 20px; font-weight: 400; color: var(--text2); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
@@ -218,6 +226,8 @@ const css = `
   .tab { padding: 8px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; color: var(--text2); transition: all 0.15s; border: none; background: none; font-family: var(--font-body); }
   .tab.active { background: var(--red); color: white; }
 
+  .theme-toggle { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--r); border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); cursor: pointer; font-size: 16px; transition: all 0.15s; flex-shrink: 0; }
+  .theme-toggle:hover { border-color: var(--red); color: var(--red); background: var(--bg4); }
   .flag-icon { font-size: 16px; }
   .inline-flex { display: inline-flex; align-items: center; gap: 6px; }
   .text-sm { font-size: 12px; }
@@ -499,9 +509,9 @@ function StandingsPage() {
               <div className="card-title">Points Gap to Leader</div>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={drivers.slice(0, 10).map(d => ({ name: d.Driver.familyName, pts: +d.points, gap: leaderPts - +d.points }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fill: "#666", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#666", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, color: "#f0f0f0", fontSize: 12 }} />
+                  <XAxis dataKey="name" tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 6, color: "var(--text)", fontSize: 12 }} />
                   <Bar dataKey="pts" fill="#E10600" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -649,13 +659,19 @@ function DriversPage() {
     setSelected(d);
     setDriverStats(null);
     setDriverResults([]);
-    const [stats, res] = await Promise.all([
+    // First fetch to get total count, then fetch last 20 using offset
+    const [stats, countRes] = await Promise.all([
       apiFetch(`/drivers/${d.driverId}/driverStandings`),
-      apiFetch(`/drivers/${d.driverId}/results`)
+      apiFetch(`/drivers/${d.driverId}/results`, { limit: 1 })
     ]);
     setDriverStats(stats?.MRData?.StandingsTable?.StandingsLists || []);
-    const results = res?.MRData?.RaceTable?.Races || [];
-    setDriverResults(results.slice(-20).reverse());
+    const total = +(countRes?.MRData?.total || 0);
+    if (total > 0) {
+      const offset = Math.max(0, total - 20);
+      const res = await apiFetch(`/drivers/${d.driverId}/results`, { limit: 20, offset });
+      const results = res?.MRData?.RaceTable?.Races || [];
+      setDriverResults([...results].reverse());
+    }
   }
 
   if (selected) {
@@ -793,12 +809,18 @@ function ConstructorsPage() {
     setSelected(t);
     setTeamResults([]);
     setTeamStandings([]);
-    const [res, stand] = await Promise.all([
-      apiFetch(`/constructors/${t.constructorId}/results`),
+    // Fetch total count first, then fetch last 20 using offset
+    const [countRes, stand] = await Promise.all([
+      apiFetch(`/constructors/${t.constructorId}/results`, { limit: 1 }),
       apiFetch(`/constructors/${t.constructorId}/constructorStandings`)
     ]);
-    setTeamResults(res?.MRData?.RaceTable?.Races?.slice(-20).reverse() || []);
     setTeamStandings(stand?.MRData?.StandingsTable?.StandingsLists || []);
+    const total = +(countRes?.MRData?.total || 0);
+    if (total > 0) {
+      const offset = Math.max(0, total - 20);
+      const res = await apiFetch(`/constructors/${t.constructorId}/results`, { limit: 20, offset });
+      setTeamResults([...(res?.MRData?.RaceTable?.Races || [])].reverse());
+    }
   }
 
   const filtered = teams.filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()) || (t.nationality || "").toLowerCase().includes(search.toLowerCase()));
@@ -829,9 +851,9 @@ function ConstructorsPage() {
             <div className="card" style={{ marginBottom: 16 }}>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={teamStandings.slice(-15).map(s => ({ season: s.season, pts: +(s.ConstructorStandings?.[0]?.points || 0), pos: +(s.ConstructorStandings?.[0]?.position || 0) }))}>
-                  <XAxis dataKey="season" tick={{ fill: "#666", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "#666", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, color: "#f0f0f0", fontSize: 12 }} />
+                  <XAxis dataKey="season" tick={{ fill: "var(--text3)", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "var(--text3)", fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 6, color: "var(--text)", fontSize: 12 }} />
                   <Line type="monotone" dataKey="pts" stroke={color} strokeWidth={2} dot={false} name="Points" />
                 </LineChart>
               </ResponsiveContainer>
@@ -1971,11 +1993,11 @@ function ComparePage() {
             </div>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                <XAxis dataKey="season" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
+                <XAxis dataKey="season" tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, fontSize: 12 }}
+                  contentStyle={{ background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 6, fontSize: 12 }}
                   labelStyle={{ color: "#999" }}
                   itemStyle={{ color: "#f0f0f0" }}
                   formatter={(val, name) => [val ?? "—", name]}
@@ -2047,6 +2069,7 @@ export default function App() {
 const [page, setPage] = useState("home");
   const [searchQ, setSearchQ] = useState("");
   const [searchDrivers, setSearchDrivers] = useState([]);
+  const [lightMode, setLightMode] = useState(false);
   const searchRef = useRef();
 
   useEffect(() => {
@@ -2062,7 +2085,7 @@ const [page, setPage] = useState("home");
   return (
     <>
       <style>{css}</style>
-      <div className="app">
+      <div className="app" data-theme={lightMode ? "light" : "dark"}>
         <nav className="nav">
           <div className="nav-inner">
             <div className="logo" onClick={() => navTo("home")}>F1<span>Stats</span></div>
@@ -2071,7 +2094,10 @@ const [page, setPage] = useState("home");
                 <button key={p.id} className={`nav-link ${page === p.id ? "active" : ""}`} onClick={() => navTo(p.id)}>{p.label}</button>
               ))}
             </div>
-            <div className="nav-search" style={{ position: "relative" }}>
+            <div className="nav-search" style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
+              <button className="theme-toggle" onClick={() => setLightMode(m => !m)} title={lightMode ? "Switch to dark mode" : "Switch to light mode"}>
+                {lightMode ? "🌙" : "☀️"}
+              </button>
               <input ref={searchRef} className="search-input" placeholder="Search..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
               {searchDrivers.length > 0 && (
                 <div style={{ position: "absolute", top: "100%", right: 0, width: 260, background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: "var(--r2)", zIndex: 200, overflow: "hidden", marginTop: 4 }}>
