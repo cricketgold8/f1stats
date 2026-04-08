@@ -131,18 +131,36 @@ const css = `
     --font-body: 'Barlow', sans-serif;
     --r: 6px; --r2: 12px;
     --nav-bg: rgba(10,10,10,0.95);
+    --red-tint: rgba(225,6,0,0.08);
+    --red-tint2: rgba(225,6,0,0.15);
+    --card-shadow: none;
   }
   [data-theme="light"] {
-    --gold: #B8860B;
-    --bg: #f5f5f5; --bg2: #ffffff; --bg3: #ebebeb; --bg4: #e0e0e0;
-    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
-    --text: #111111; --text2: #555555; --text3: #999999;
-    --nav-bg: rgba(245,245,245,0.95);
+    --gold: #9A6E00;
+    --bg: #EAEAE6; --bg2: #FFFFFF; --bg3: #F0EFEB; --bg4: #E2E1DC;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.20);
+    --text: #111111; --text2: #3D3D3D; --text3: #7A7A7A;
+    --nav-bg: rgba(255,255,255,0.97);
+    --red-tint: rgba(225,6,0,0.08);
+    --red-tint2: rgba(225,6,0,0.13);
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
   }
+  [data-theme="light"] body { background: var(--bg); }
+  [data-theme="light"] .nav { background: var(--nav-bg); border-bottom: 2px solid var(--border2); box-shadow: 0 1px 8px rgba(0,0,0,0.08); }
+  [data-theme="light"] .hero-banner { background: linear-gradient(135deg, #fff 0%, #f5f0f0 100%); border: 1px solid rgba(225,6,0,0.15); }
+  [data-theme="light"] .hero-banner::before { color: rgba(225,6,0,0.06); }
+  [data-theme="light"] .btn { background: #FFFFFF; border-color: var(--border2); color: var(--text); }
+  [data-theme="light"] .btn:hover { background: var(--bg3); border-color: var(--red); color: var(--red); }
+  [data-theme="light"] .btn.active { background: var(--red); border-color: var(--red); color: white; }
+  [data-theme="light"] .tab-row { background: var(--bg3); border-color: var(--border2); }
+  [data-theme="light"] .search-input { background: #FFFFFF; border-color: var(--border2); }
+  [data-theme="light"] .theme-toggle { background: #FFFFFF; border-color: var(--border2); }
+  [data-theme="light"] .stat-card { border-color: var(--border2); }
+  [data-theme="light"] tr:hover td { background: #F7F5F0; }
   body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--bg2); } ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 2px; }
 
-  .app { min-height: 100vh; }
+  .app { min-height: 100vh; background: var(--bg); color: var(--text); }
   .nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border2); }
   .nav-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; gap: 0; padding: 0 16px; height: 56px; }
   .logo { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--red); letter-spacing: 1px; margin-right: 32px; cursor: pointer; white-space: nowrap; }
@@ -150,7 +168,9 @@ const css = `
   .nav-links { display: flex; gap: 2px; overflow-x: auto; flex: 1; }
   .nav-link { padding: 6px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text2); border-radius: var(--r); cursor: pointer; white-space: nowrap; transition: all 0.15s; border: none; background: none; font-family: var(--font-body); }
   .nav-link:hover { color: var(--text); background: var(--bg3); }
-  .nav-link.active { color: var(--red); background: rgba(225,6,0,0.1); }
+  .nav-link.active { color: var(--red); background: var(--red-tint); }
+  [data-theme="light"] .nav-link { color: var(--text2); }
+  [data-theme="light"] .nav-link:hover { color: var(--text); background: var(--bg3); }
   .nav-search { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   .search-input { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r); padding: 6px 12px; color: var(--text); font-size: 13px; font-family: var(--font-body); width: 200px; outline: none; }
   .search-input:focus { border-color: var(--red); }
@@ -166,22 +186,24 @@ const css = `
   .grid-3 { grid-template-columns: repeat(3, 1fr); }
   .grid-4 { grid-template-columns: repeat(4, 1fr); }
 
-  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 20px; transition: border-color 0.2s; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 20px; transition: border-color 0.2s; box-shadow: var(--card-shadow); }
   .card:hover { border-color: var(--border2); }
   .card-sm { padding: 14px 16px; }
   .card-title { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
   .card-value { font-family: var(--font-display); font-size: 32px; font-weight: 800; line-height: 1; }
   .card-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
 
-  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 16px; text-align: center; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 16px; text-align: center; box-shadow: var(--card-shadow); }
   .stat-num { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--red); }
   .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
 
   .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
-  .tag-red { background: rgba(225,6,0,0.15); color: #ff6b6b; }
+  .tag-red { background: var(--red-tint2); color: var(--red); }
   .tag-gold { background: rgba(255,215,0,0.12); color: var(--gold); }
-  .tag-blue { background: rgba(54,113,198,0.15); color: #64a0ff; }
+  .tag-blue { background: rgba(54,113,198,0.12); color: #3671C6; }
   .tag-gray { background: var(--bg4); color: var(--text2); }
+  [data-theme="light"] .tag-blue { background: rgba(54,113,198,0.12); color: #1a55a0; }
+  [data-theme="light"] .tag-gold { background: rgba(154,110,0,0.12); color: var(--gold); }
 
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
@@ -191,7 +213,8 @@ const css = `
   tr:hover td { background: var(--bg3); }
   .pos { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text3); min-width: 28px; display: inline-block; text-align: right; }
   .pos.p1 { color: var(--gold); }
-  .pos.p2 { color: #C0C0C0; }
+  .pos.p2 { color: #888; }
+  [data-theme="light"] .pos.p2 { color: #666; }
   .pos.p3 { color: #CD7F32; }
 
   .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid transparent; }
@@ -249,8 +272,28 @@ const css = `
     .grid-3 { grid-template-columns: 1fr; }
     .grid-2 { grid-template-columns: 1fr; }
     .hero-season { font-size: 48px; }
-    .nav-links { gap: 0; }
-    .nav-link { padding: 6px 8px; font-size: 11px; }
+    .nav-links { display: none; }
+    .nav-search .search-input { display: none; }
+    .hamburger { display: flex !important; }
+  }
+  .hamburger { display: none; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--r); border: 1px solid var(--border2); background: var(--bg3); color: var(--text); cursor: pointer; flex-direction: column; gap: 4px; padding: 8px; flex-shrink: 0; transition: all 0.15s; }
+  .hamburger:hover { border-color: var(--red); }
+  .hamburger span { display: block; width: 16px; height: 2px; background: currentColor; border-radius: 2px; transition: all 0.2s; transform-origin: center; }
+  .hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .mobile-drawer { display: none; }
+  @media (max-width: 768px) {
+    .mobile-drawer { display: block; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 99; background: var(--bg2); border-top: 1px solid var(--border2); overflow-y: auto; transform: translateY(-8px); opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease; }
+    .mobile-drawer.open { transform: translateY(0); opacity: 1; pointer-events: all; }
+    .mobile-drawer-inner { padding: 12px 16px 32px; }
+    .mobile-search { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r); padding: 10px 14px; color: var(--text); font-size: 14px; font-family: var(--font-body); outline: none; margin-bottom: 16px; }
+    .mobile-search:focus { border-color: var(--red); }
+    .mobile-nav-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .mobile-nav-item { padding: 14px 16px; border-radius: var(--r2); border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; text-align: left; font-family: var(--font-body); transition: all 0.15s; }
+    .mobile-nav-item:hover { border-color: var(--border2); color: var(--text); background: var(--bg4); }
+    .mobile-nav-item.active { background: var(--red); border-color: var(--red); color: white; }
+    .mobile-nav-item .nav-icon { font-size: 18px; display: block; margin-bottom: 6px; }
   }
 `;
 
@@ -450,8 +493,8 @@ function HomePage({ onNav }) {
       </div>
 
       {/* Historical Fact */}
-      <div className="card" style={{ background: "linear-gradient(135deg, #1a0505, #0a0a0a)", borderColor: "rgba(225,6,0,0.3)", display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 800, color: "rgba(225,6,0,0.3)", lineHeight: 1, minWidth: 80 }}>{todayFact.year}</div>
+      <div className="card" style={{ background: "linear-gradient(135deg, var(--red-tint2), var(--bg3))", borderColor: "rgba(225,6,0,0.3)", display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 800, color: "var(--red)", opacity: 0.35, lineHeight: 1, minWidth: 80 }}>{todayFact.year}</div>
         <div>
           <div style={{ fontSize: 11, color: "var(--red)", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>Historical Fact</div>
           <div style={{ fontSize: 15, fontWeight: 500 }}>{todayFact.fact}</div>
@@ -687,7 +730,7 @@ function DriversPage() {
           <div>
             <div className="page-title">{selected.givenName} <span className="red">{selected.familyName}</span></div>
             <div className="page-sub">{flag(selected.nationality)} {selected.nationality} · Born {selected.dateOfBirth ? new Date(selected.dateOfBirth).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" }) : "N/A"}</div>
-            {selected.permanentNumber && <div style={{ fontFamily: "var(--font-display)", fontSize: 64, fontWeight: 800, color: "rgba(225,6,0,0.2)", lineHeight: 1 }}>#{selected.permanentNumber}</div>}
+            {selected.permanentNumber && <div style={{ fontFamily: "var(--font-display)", fontSize: 64, fontWeight: 800, color: "var(--red)", opacity: 0.18, lineHeight: 1 }}>#{selected.permanentNumber}</div>}
           </div>
           <div className="grid grid-2" style={{ gap: 12 }}>
             <div className="stat-card"><div className="stat-num">{champs.length}</div><div className="stat-label">Championships</div></div>
@@ -1628,7 +1671,7 @@ function OnThisDayPage() {
       <div className="page-title">On This Day <span className="red">in F1</span></div>
 
       {/* Date picker header */}
-      <div className="card" style={{ marginBottom: 24, background: "linear-gradient(135deg,#1a0505,#0a0a0a)", borderColor: "rgba(225,6,0,0.2)" }}>
+      <div className="card" style={{ marginBottom: 24, background: "linear-gradient(135deg, var(--red-tint), var(--bg3))", borderColor: "rgba(225,6,0,0.2)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <button className="btn" onClick={() => changeDate(-1)} style={{ fontSize: 18, padding: "6px 14px" }}>‹</button>
           <div style={{ display: "flex", alignItems: "center", gap: 20, flex: 1, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1998,8 +2041,8 @@ function ComparePage() {
                 <YAxis tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{ background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 6, fontSize: 12 }}
-                  labelStyle={{ color: "#999" }}
-                  itemStyle={{ color: "#f0f0f0" }}
+                  labelStyle={{ color: "var(--text2)" }}
+                  itemStyle={{ color: "var(--text)" }}
                   formatter={(val, name) => [val ?? "—", name]}
                 />
                 <Line type="monotone" dataKey="d1pts" stroke="#E10600" strokeWidth={2} dot={{ r: 3, fill: "#E10600" }} connectNulls name={d1Info.familyName} />
@@ -2070,6 +2113,7 @@ const [page, setPage] = useState("home");
   const [searchQ, setSearchQ] = useState("");
   const [searchDrivers, setSearchDrivers] = useState([]);
   const [lightMode, setLightMode] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const searchRef = useRef();
 
   useEffect(() => {
@@ -2080,7 +2124,7 @@ const [page, setPage] = useState("home");
     });
   }, [searchQ]);
 
-  const navTo = (p) => { setPage(p); setSearchQ(""); window.scrollTo(0, 0); };
+  const navTo = (p) => { setPage(p); setSearchQ(""); setMobileOpen(false); window.scrollTo(0, 0); };
 
   return (
     <>
@@ -2098,7 +2142,10 @@ const [page, setPage] = useState("home");
               <button className="theme-toggle" onClick={() => setLightMode(m => !m)} title={lightMode ? "Switch to dark mode" : "Switch to light mode"}>
                 {lightMode ? "🌙" : "☀️"}
               </button>
-              <input ref={searchRef} className="search-input" placeholder="Search..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+              <input ref={searchRef} className="search-input" placeholder="Search drivers..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+              <button className={`hamburger ${mobileOpen ? "open" : ""}`} onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
+                <span /><span /><span />
+              </button>
               {searchDrivers.length > 0 && (
                 <div style={{ position: "absolute", top: "100%", right: 0, width: 260, background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: "var(--r2)", zIndex: 200, overflow: "hidden", marginTop: 4 }}>
                   {searchDrivers.map(d => (
@@ -2112,6 +2159,47 @@ const [page, setPage] = useState("home");
             </div>
           </div>
         </nav>
+
+        {/* Mobile drawer */}
+        <div className={`mobile-drawer ${mobileOpen ? "open" : ""}`}>
+          <div className="mobile-drawer-inner">
+            <input
+              className="mobile-search"
+              placeholder="Search drivers..."
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+            />
+            {searchQ && searchDrivers.length > 0 && (
+              <div style={{ background: "var(--bg3)", borderRadius: "var(--r2)", border: "1px solid var(--border2)", overflow: "hidden", marginBottom: 16 }}>
+                {searchDrivers.map(d => (
+                  <div key={d.driverId} style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid var(--border)", fontSize: 13 }} onClick={() => { navTo("drivers"); setSearchQ(""); }}>
+                    <div style={{ fontWeight: 600 }}>{d.givenName} {d.familyName}</div>
+                    <div style={{ fontSize: 11, color: "var(--text3)" }}>{flag(d.nationality)} {d.nationality}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mobile-nav-grid">
+              {PAGES.map(p => (
+                <button key={p.id} className={`mobile-nav-item ${page === p.id ? "active" : ""}`} onClick={() => navTo(p.id)}>
+                  <span className="nav-icon">{
+                    p.id === "home" ? "🏠" :
+                    p.id === "standings" ? "🏆" :
+                    p.id === "races" ? "🏁" :
+                    p.id === "all-races" ? "📅" :
+                    p.id === "drivers" ? "👤" :
+                    p.id === "constructors" ? "🔧" :
+                    p.id === "circuits" ? "🗺️" :
+                    p.id === "stats" ? "📊" :
+                    p.id === "onthisday" ? "📆" :
+                    p.id === "compare" ? "⚡" : "•"
+                  }</span>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {page === "home" && <HomePage onNav={navTo} />}
         {page === "standings" && <StandingsPage />}
