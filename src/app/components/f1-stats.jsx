@@ -1242,9 +1242,12 @@ function AllRacesPage() {
   const [resultsLoading, setResultsLoading] = useState(false);
 
   useEffect(() => {
-    apiFetchAll("/races").then(d => {
-      const r = d?.MRData?.RaceTable?.Races || [];
-      setAllRaces(r.sort((a, b) => b.season - a.season || b.round - a.round));
+    apiFetchAll("/results/1").then(d => {
+      const now = new Date();
+      const r = (d?.MRData?.RaceTable?.Races || [])
+        .filter(r => new Date(r.date) <= now)
+        .sort((a, b) => b.season - a.season || b.round - a.round);
+      setAllRaces(r);
       setLoading(false);
     });
   }, []);
@@ -1852,258 +1855,18 @@ function OnThisDayPage() {
 }
 
 // COMPARE DRIVERS TOOL
-function ComparePage() {
-  const [drivers, setDrivers] = useState([]);
-  const [d1, setD1] = useState("");
-  const [d2, setD2] = useState("");
-  const [result1, setResult1] = useState(null);
-  const [result2, setResult2] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("");
-
-  useEffect(() => {
-    apiFetchAll("/drivers").then(d => {
-      const list = (d?.MRData?.DriverTable?.Drivers || []).sort((a, b) => a.familyName.localeCompare(b.familyName));
-      setDrivers(list);
-    });
-  }, []);
-
-  async function fetchDriverData(driverId, onProgress) {
-    // Fetch all race results paginated — this is the only reliable way to get
-    // accurate win/podium/pole counts across all eras from the Jolpica API
-    onProgress("loading career results");
-    const resultsData = await apiFetchAll(`/drivers/${driverId}/results`);
-    const allRaces = resultsData?.MRData?.RaceTable?.Races || [];
-
-    onProgress("loading season standings");
-    const standingsData = await apiFetchAll(`/drivers/${driverId}/driverStandings`);
-    const standingsList = standingsData?.MRData?.StandingsTable?.StandingsLists || [];
-
-    const wins        = allRaces.filter(r => r.Results?.[0]?.position === "1").length;
-    const podiums     = allRaces.filter(r => ["1","2","3"].includes(r.Results?.[0]?.position)).length;
-    const poles       = allRaces.filter(r => r.Results?.[0]?.grid === "1").length;
-    const fastestLaps = allRaces.filter(r => r.Results?.[0]?.FastestLap?.rank === "1").length;
-    const races       = allRaces.length;
-    const totalPts    = standingsList.reduce((acc, s) => acc + +(s.DriverStandings?.[0]?.points || 0), 0);
-    const seasons     = standingsList.length;
-    const titles      = standingsList.filter(s => s.DriverStandings?.[0]?.position === "1").length;
-    const bestPos     = standingsList.length
-      ? Math.min(...standingsList.map(s => +(s.DriverStandings?.[0]?.position || 99)))
-      : 99;
-    const seasonPoints = standingsList
-      .map(s => ({ season: +s.season, pts: +(s.DriverStandings?.[0]?.points || 0) }))
-      .sort((a, b) => a.season - b.season);
-
-    return { seasonPoints, wins, podiums, poles, fastestLaps, totalPts, races, seasons, titles, bestPos };
-  }
-
-  async function compare() {
-    if (!d1 || !d2) return;
-    setLoading(true);
-    setResult1(null);
-    setResult2(null);
-    const n1 = drivers.find(d => d.driverId === d1)?.familyName || d1;
-    const n2 = drivers.find(d => d.driverId === d2)?.familyName || d2;
-    setLoadingMsg(`Loading ${n1} career data...`);
-    const r1 = await fetchDriverData(d1, msg => setLoadingMsg(`${n1}: ${msg}...`));
-    setLoadingMsg(`Loading ${n2} career data...`);
-    const r2 = await fetchDriverData(d2, msg => setLoadingMsg(`${n2}: ${msg}...`));
-    setResult1(r1);
-    setResult2(r2);
-    setLoading(false);
-    setLoadingMsg("");
-  }
-
-  const d1Info = drivers.find(d => d.driverId === d1);
-  const d2Info = drivers.find(d => d.driverId === d2);
-
-  // Build a unified season chart — all seasons either driver competed in
-  const chartData = (() => {
-    if (!result1 || !result2) return [];
-    const seasonMap = {};
-    result1.seasonPoints.forEach(s => {
-      seasonMap[s.season] = { season: s.season, d1pts: s.pts };
-    });
-    result2.seasonPoints.forEach(s => {
-      if (seasonMap[s.season]) seasonMap[s.season].d2pts = s.pts;
-      else seasonMap[s.season] = { season: s.season, d2pts: s.pts };
-    });
-    return Object.values(seasonMap).sort((a, b) => a.season - b.season);
-  })();
-
-  const selectStyle = { background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", padding: "10px 14px", borderRadius: "var(--r)", fontFamily: "var(--font-body)", fontSize: 13, flex: 1, outline: "none", width: "100%" };
-
-  const metrics = result1 && result2 ? [
-    { label: "Championships",  v1: result1.titles,       v2: result2.titles,       lower: false },
-    { label: "Race Wins",      v1: result1.wins,         v2: result2.wins,         lower: false },
-    { label: "Podiums",        v1: result1.podiums,      v2: result2.podiums,      lower: false },
-    { label: "Pole Positions", v1: result1.poles,        v2: result2.poles,        lower: false },
-    { label: "Fastest Laps",   v1: result1.fastestLaps,  v2: result2.fastestLaps,  lower: false },
-    { label: "Total Points",   v1: result1.totalPts,     v2: result2.totalPts,     lower: false },
-    { label: "Races Entered",  v1: result1.races,        v2: result2.races,        lower: false },
-    { label: "Seasons",        v1: result1.seasons,      v2: result2.seasons,      lower: false },
-    { label: "Best Championship Pos", v1: result1.bestPos, v2: result2.bestPos,    lower: true  },
-  ] : [];
-
-  return (
-    <div className="page">
-      <div className="page-title">Driver <span className="red">Comparison</span></div>
-      <div className="page-sub">Compare any two F1 drivers head-to-head across their full careers</div>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div className="card-title" style={{ marginBottom: 6 }}>Driver 1</div>
-            <select value={d1} onChange={e => setD1(e.target.value)} style={selectStyle}>
-              <option value="">Select driver...</option>
-              {drivers.map(d => <option key={d.driverId} value={d.driverId}>{d.givenName} {d.familyName}</option>)}
-            </select>
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 800, color: "var(--text3)", paddingBottom: 2, alignSelf: "flex-end" }}>VS</div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div className="card-title" style={{ marginBottom: 6 }}>Driver 2</div>
-            <select value={d2} onChange={e => setD2(e.target.value)} style={selectStyle}>
-              <option value="">Select driver...</option>
-              {drivers.map(d => <option key={d.driverId} value={d.driverId}>{d.givenName} {d.familyName}</option>)}
-            </select>
-          </div>
-          <button
-            className="btn active"
-            onClick={compare}
-            disabled={!d1 || !d2 || loading}
-            style={{ height: 42, minWidth: 130, opacity: (!d1 || !d2) ? 0.4 : 1 }}>
-            {loading ? "Loading..." : "Compare →"}
-          </button>
-        </div>
-      </div>
-
-      {loading && (
-        <div className="card" style={{ textAlign: "center", padding: 40 }}>
-          <Spinner />
-          <div style={{ color: "var(--text3)", fontSize: 13, marginTop: 8 }}>{loadingMsg}</div>
-          <div style={{ color: "var(--text3)", fontSize: 11, marginTop: 4 }}>Fetching full career data — this may take a moment</div>
-        </div>
-      )}
-
-      {result1 && result2 && d1Info && d2Info && (
-        <>
-          {/* Stat cards side by side */}
-          <div className="grid grid-2" style={{ gap: 16, marginBottom: 16 }}>
-            {[{ info: d1Info, r: result1, color: "#E10600" }, { info: d2Info, r: result2, color: "#3671C6" }].map(({ info, r, color }) => (
-              <div key={info.driverId} className="card" style={{ borderTop: `3px solid ${color}` }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, marginBottom: 2 }}>
-                  {info.givenName} {info.familyName}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 16 }}>
-                  {flag(info.nationality)} {info.nationality}
-                  {info.permanentNumber ? <span className="tag tag-red" style={{ marginLeft: 8 }}>#{info.permanentNumber}</span> : null}
-                </div>
-                <div className="grid grid-3" style={{ gap: 8 }}>
-                  {[
-                    { label: "Titles",    val: r.titles,      highlight: true },
-                    { label: "Wins",      val: r.wins },
-                    { label: "Podiums",   val: r.podiums },
-                    { label: "Poles",     val: r.poles },
-                    { label: "Fastest",   val: r.fastestLaps },
-                    { label: "Pts",       val: r.totalPts },
-                  ].map(m => (
-                    <div key={m.label} className="stat-card" style={{ background: "var(--bg3)", padding: "10px 8px" }}>
-                      <div className="stat-num" style={{ fontSize: 22, color: m.highlight ? color : "var(--text)" }}>{m.val}</div>
-                      <div className="stat-label">{m.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Points chart — shared x-axis, both drivers on same chart */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", gap: 20, marginBottom: 12, flexWrap: "wrap" }}>
-              <div className="card-title" style={{ margin: 0, alignSelf: "center" }}>Season Points</div>
-              <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--text2)" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 20, height: 3, background: "#E10600", display: "inline-block", borderRadius: 2 }}></span>
-                  {d1Info.familyName}
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 20, height: 3, background: "#3671C6", display: "inline-block", borderRadius: 2 }}></span>
-                  {d2Info.familyName}
-                </span>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                <XAxis dataKey="season" tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "var(--text3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 6, fontSize: 12 }}
-                  labelStyle={{ color: "var(--text2)" }}
-                  itemStyle={{ color: "var(--text)" }}
-                  formatter={(val, name) => [val ?? "—", name]}
-                />
-                <Line type="monotone" dataKey="d1pts" stroke="#E10600" strokeWidth={2} dot={{ r: 3, fill: "#E10600" }} connectNulls name={d1Info.familyName} />
-                <Line type="monotone" dataKey="d2pts" stroke="#3671C6" strokeWidth={2} dot={{ r: 3, fill: "#3671C6" }} connectNulls name={d2Info.familyName} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Head-to-head table */}
-          <div className="card" style={{ padding: 0 }}>
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
-              <div className="card-title" style={{ margin: 0 }}>Head-to-Head</div>
-            </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ color: "#E10600", fontSize: 13 }}>{d1Info.familyName}</th>
-                    <th style={{ textAlign: "center", width: 140 }}>Metric</th>
-                    <th style={{ textAlign: "right", color: "#3671C6", fontSize: 13 }}>{d2Info.familyName}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics.map(row => {
-                    const tie = row.v1 === row.v2;
-                    const v1Better = tie ? false : (row.lower ? row.v1 < row.v2 : row.v1 > row.v2);
-                    const v2Better = tie ? false : !v1Better;
-                    return (
-                      <tr key={row.label}>
-                        <td style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: v1Better ? "#E10600" : tie ? "var(--text2)" : "var(--text3)" }}>
-                          {row.v1}
-                          {v1Better && <span style={{ fontSize: 11, marginLeft: 6, color: "#E10600" }}>▲</span>}
-                        </td>
-                        <td style={{ textAlign: "center", color: "var(--text3)", fontSize: 12, fontWeight: 500 }}>{row.label}</td>
-                        <td style={{ textAlign: "right", fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: v2Better ? "#3671C6" : tie ? "var(--text2)" : "var(--text3)" }}>
-                          {v2Better && <span style={{ fontSize: 11, marginRight: 6, color: "#3671C6" }}>▲</span>}
-                          {row.v2}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 // MAIN APP
 const PAGES = [
   { id: "home", label: "Home" },
   { id: "standings", label: "Standings" },
   { id: "races", label: "Season Races" },
-  { id: "all-races", label: "All Races" }, // Added this line
+  { id: "all-races", label: "All Races" },
   { id: "drivers", label: "Drivers" },
   { id: "constructors", label: "Constructors" },
   { id: "circuits", label: "Circuits" },
-  { id: "stats", label: "Records" }, // Renamed from Statistics
+  { id: "stats", label: "Records" },
   { id: "onthisday", label: "On This Day" },
-  { id: "compare", label: "Compare" },
 ];
 
 export default function App() {
@@ -2191,8 +1954,7 @@ const [page, setPage] = useState("home");
                     p.id === "constructors" ? "🔧" :
                     p.id === "circuits" ? "🗺️" :
                     p.id === "stats" ? "📊" :
-                    p.id === "onthisday" ? "📆" :
-                    p.id === "compare" ? "⚡" : "•"
+                    p.id === "onthisday" ? "📆" : "•"
                   }</span>
                   {p.label}
                 </button>
@@ -2211,7 +1973,7 @@ const [page, setPage] = useState("home");
 {page === "all-races" && <AllRacesPage />}
 
 {page === "onthisday" && <OnThisDayPage />}
-{page === "compare" && <ComparePage />}
+
 
         <footer style={{ borderTop: "1px solid var(--border)", padding: "24px 16px", textAlign: "center", color: "var(--text3)", fontSize: 12, marginTop: 48 }}>
           <div style={{ maxWidth: 1400, margin: "0 auto" }}>
