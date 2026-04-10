@@ -1868,35 +1868,37 @@ function ComparePage() {
   }, []);
 
   async function fetchDriverData(driverId) {
-    // Fetch all season standings for this driver (paginated)
-    const standingsData = await apiFetchAll(`/drivers/${driverId}/driverStandings`);
+    // Fetch standings + all targeted count queries in parallel — no full result pagination needed
+    const [standingsData, winsRes, secondsRes, thirdsRes, polesRes, fastestRes, racesRes] = await Promise.all([
+      apiFetchAll(`/drivers/${driverId}/driverStandings`),
+      apiFetch(`/drivers/${driverId}/results/1`,        { limit: 1 }), // wins
+      apiFetch(`/drivers/${driverId}/results/2`,        { limit: 1 }), // 2nds
+      apiFetch(`/drivers/${driverId}/results/3`,        { limit: 1 }), // 3rds
+      apiFetch(`/drivers/${driverId}/grid/1/results`,   { limit: 1 }), // poles
+      apiFetch(`/drivers/${driverId}/fastest/1/results`,{ limit: 1 }), // fastest laps
+      apiFetch(`/drivers/${driverId}/results`,          { limit: 1 }), // total races
+    ]);
+
     const standingsList = standingsData?.MRData?.StandingsTable?.StandingsLists || [];
 
-    // Fetch all race results (paginated) to count accurate wins, podiums, poles, fastest laps
-    const resultsData = await apiFetchAll(`/drivers/${driverId}/results`);
-    const allRaces = resultsData?.MRData?.RaceTable?.Races || [];
+    const wins        = +(winsRes?.MRData?.total    || 0);
+    const seconds     = +(secondsRes?.MRData?.total || 0);
+    const thirds      = +(thirdsRes?.MRData?.total  || 0);
+    const podiums     = wins + seconds + thirds;
+    const poles       = +(polesRes?.MRData?.total   || 0);
+    const fastestLaps = +(fastestRes?.MRData?.total || 0);
+    const races       = +(racesRes?.MRData?.total   || 0);
 
-    // Per-season points for chart — from standings (most accurate)
-    const seasonPoints = standingsList
-      .map(s => ({
-        season: +s.season,
-        pts: +(s.DriverStandings?.[0]?.points || 0),
-        pos: +(s.DriverStandings?.[0]?.position || 0),
-      }))
-      .sort((a, b) => a.season - b.season);
-
-    // Accurate career stats from race results
-    const wins = allRaces.filter(r => r.Results?.[0]?.position === "1").length;
-    const podiums = allRaces.filter(r => ["1","2","3"].includes(r.Results?.[0]?.position)).length;
-    const poles = allRaces.filter(r => r.Results?.[0]?.grid === "1").length;
-    const fastestLaps = allRaces.filter(r => r.Results?.[0]?.FastestLap?.rank === "1").length;
-    const totalPts = allRaces.reduce((acc, r) => acc + +(r.Results?.[0]?.points || 0), 0);
-    const races = allRaces.length;
-    const seasons = standingsList.length;
-    const titles = standingsList.filter(s => s.DriverStandings?.[0]?.position === "1").length;
-    const bestPos = standingsList.length
+    // Points & season chart derived from standings — fast and accurate
+    const totalPts = standingsList.reduce((acc, s) => acc + +(s.DriverStandings?.[0]?.points || 0), 0);
+    const seasons  = standingsList.length;
+    const titles   = standingsList.filter(s => s.DriverStandings?.[0]?.position === "1").length;
+    const bestPos  = standingsList.length
       ? Math.min(...standingsList.map(s => +(s.DriverStandings?.[0]?.position || 99)))
       : 99;
+    const seasonPoints = standingsList
+      .map(s => ({ season: +s.season, pts: +(s.DriverStandings?.[0]?.points || 0) }))
+      .sort((a, b) => a.season - b.season);
 
     return { seasonPoints, wins, podiums, poles, fastestLaps, totalPts, races, seasons, titles, bestPos };
   }
@@ -1906,10 +1908,9 @@ function ComparePage() {
     setLoading(true);
     setResult1(null);
     setResult2(null);
-    setLoadingMsg(`Loading ${drivers.find(d=>d.driverId===d1)?.familyName}...`);
-    const r1 = await fetchDriverData(d1);
-    setLoadingMsg(`Loading ${drivers.find(d=>d.driverId===d2)?.familyName}...`);
-    const r2 = await fetchDriverData(d2);
+    setLoadingMsg("Fetching career data for both drivers...");
+    // Both drivers fetched in parallel
+    const [r1, r2] = await Promise.all([fetchDriverData(d1), fetchDriverData(d2)]);
     setResult1(r1);
     setResult2(r2);
     setLoading(false);
@@ -2115,6 +2116,8 @@ const [page, setPage] = useState("home");
   const [lightMode, setLightMode] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const searchRef = useRef();
+
+  useEffect(() => { document.title = "F1Stats"; }, []);
 
   useEffect(() => {
     if (!searchQ) { setSearchDrivers([]); return; }
