@@ -1867,19 +1867,27 @@ function ComparePage() {
     });
   }, []);
 
-  async function fetchDriverData(driverId) {
-    // Fetch standings + all targeted count queries in parallel — no full result pagination needed
-    const [standingsData, winsRes, secondsRes, thirdsRes, polesRes, fastestRes, racesRes] = await Promise.all([
-      apiFetchAll(`/drivers/${driverId}/driverStandings`),
-      apiFetch(`/drivers/${driverId}/results/1`,        { limit: 1 }), // wins
-      apiFetch(`/drivers/${driverId}/results/2`,        { limit: 1 }), // 2nds
-      apiFetch(`/drivers/${driverId}/results/3`,        { limit: 1 }), // 3rds
-      apiFetch(`/drivers/${driverId}/grid/1/results`,   { limit: 1 }), // poles
-      apiFetch(`/drivers/${driverId}/fastest/1/results`,{ limit: 1 }), // fastest laps
-      apiFetch(`/drivers/${driverId}/results`,          { limit: 1 }), // total races
+  async function fetchDriverData(driverId, onProgress) {
+    // Step 1: standings (paginated but fast — small dataset)
+    onProgress("standings");
+    const standingsData = await apiFetchAll(`/drivers/${driverId}/driverStandings`);
+    const standingsList = standingsData?.MRData?.StandingsTable?.StandingsLists || [];
+
+    // Step 2: wins, poles, fastest laps — 3 targeted calls, each returns just a total count
+    onProgress("race stats");
+    const [winsRes, polesRes, fastestRes, racesRes] = await Promise.all([
+      apiFetch(`/drivers/${driverId}/results/1`,         { limit: 1 }),
+      apiFetch(`/drivers/${driverId}/grid/1/results`,    { limit: 1 }),
+      apiFetch(`/drivers/${driverId}/fastest/1/results`, { limit: 1 }),
+      apiFetch(`/drivers/${driverId}/results`,           { limit: 1 }),
     ]);
 
-    const standingsList = standingsData?.MRData?.StandingsTable?.StandingsLists || [];
+    // Step 3: podiums need 2nd + 3rd separately
+    onProgress("podiums");
+    const [secondsRes, thirdsRes] = await Promise.all([
+      apiFetch(`/drivers/${driverId}/results/2`, { limit: 1 }),
+      apiFetch(`/drivers/${driverId}/results/3`, { limit: 1 }),
+    ]);
 
     const wins        = +(winsRes?.MRData?.total    || 0);
     const seconds     = +(secondsRes?.MRData?.total || 0);
@@ -1889,7 +1897,6 @@ function ComparePage() {
     const fastestLaps = +(fastestRes?.MRData?.total || 0);
     const races       = +(racesRes?.MRData?.total   || 0);
 
-    // Points & season chart derived from standings — fast and accurate
     const totalPts = standingsList.reduce((acc, s) => acc + +(s.DriverStandings?.[0]?.points || 0), 0);
     const seasons  = standingsList.length;
     const titles   = standingsList.filter(s => s.DriverStandings?.[0]?.position === "1").length;
@@ -1908,9 +1915,13 @@ function ComparePage() {
     setLoading(true);
     setResult1(null);
     setResult2(null);
-    setLoadingMsg("Fetching career data for both drivers...");
-    // Both drivers fetched in parallel
-    const [r1, r2] = await Promise.all([fetchDriverData(d1), fetchDriverData(d2)]);
+    const n1 = drivers.find(d => d.driverId === d1)?.familyName || d1;
+    const n2 = drivers.find(d => d.driverId === d2)?.familyName || d2;
+    // Fetch both drivers sequentially to avoid hammering the rate limit
+    setLoadingMsg(`${n1}: fetching standings...`);
+    const r1 = await fetchDriverData(d1, step => setLoadingMsg(`${n1}: ${step}...`));
+    setLoadingMsg(`${n2}: fetching standings...`);
+    const r2 = await fetchDriverData(d2, step => setLoadingMsg(`${n2}: ${step}...`));
     setResult1(r1);
     setResult2(r2);
     setLoading(false);
